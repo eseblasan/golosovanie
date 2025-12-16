@@ -135,7 +135,7 @@
 
     <div class="foot">
       ⚠️ Если видишь <code>auth/unauthorized-domain</code> — добавь домен в Firebase:
-      <b>Authentication → Settings → Authorized domains</b> → <code>aseblasan.github.io</code><br/>
+      <b>Authentication → Settings → Authorized domains</b> → <code>eseblasan.github.io</code><br/>
       ✅ YouTube вставляй в формате: <code>https://www.youtube.com/embed/VIDEO_ID</code>
     </div>
   </div>
@@ -149,9 +149,12 @@
       increment,
       deleteField,
       runTransaction
+    
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     import {
+        setPersistence,
+browserLocalPersistence,
       getAuth,
       GoogleAuthProvider,
       signInWithRedirect,
@@ -219,8 +222,8 @@
     const db = getFirestore(app);
 
     const auth = getAuth(app);
+    setPersistence(auth, browserLocalPersistence).catch(console.error);
     const provider = new GoogleAuthProvider();
-
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const userInfo = document.getElementById("userInfo");
