@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Голосование — Номинации</title>
+  <title>Голосование — Slay Awards</title>
   <style>
     :root{
       --bg:#0b0b12;
@@ -12,6 +12,8 @@
       --text:#f3f3ff;
       --muted:#a9a9c6;
       --ring: rgba(255,79,216,.35);
+      --ok:#7CFFB2;
+      --bad:#ff8a8a;
     }
     *{box-sizing:border-box}
     body{
@@ -28,7 +30,7 @@
     .wrap{width:min(1100px, 100%); margin:0 auto;}
     header{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px;}
     h1{margin:0; font-size: clamp(26px, 3.5vw, 40px); line-height:1.1;}
-    .sub{margin:8px 0 0; color:var(--muted); font-size:14px; max-width:86ch;}
+    .sub{margin:8px 0 0; color:var(--muted); font-size:14px; max-width:92ch;}
     .pill{
       padding:10px 12px;
       background: linear-gradient(135deg, rgba(255,79,216,.18), rgba(124,77,255,.18));
@@ -106,6 +108,8 @@
     .voteHeader{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;}
     .voteHeader b{font-size:13px;}
     .status{color:var(--muted); font-size:12px;}
+    .status.ok{color:var(--ok)}
+    .status.bad{color:var(--bad)}
 
     .options{display:grid; grid-template-columns: repeat(2,1fr); gap:10px;}
     @media (min-width: 520px){ .options{grid-template-columns: repeat(3,1fr);} }
@@ -165,45 +169,54 @@
 </head>
 
 <body>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 12px 0;">
+  <button id="loginBtn">Войти через Google</button>
+  <button id="logoutBtn" disabled>Выйти</button>
+  <span id="userInfo" style="color:#a9a9c6;font-size:12px;"></span>
+</div>
+
   <div class="wrap">
     <header>
       <div>
-        <h1>Голосование по номинациям</h1>
+        <h1>Slay Awards — голосование</h1>
         <p class="sub">
-          У каждой номинации есть <b>видео</b> и выбор номинанта.
-          Голоса сохраняются в Firebase Firestore и видны всем.
+          Голоса сохраняются в Firebase Firestore и видны всем. Смена голоса: <b>−1 старому</b> и можно выбрать нового.
         </p>
         <p class="sub">
-          <span class="muted">Важно:</span> “1 голос” сейчас по устройству/браузеру.
-          Чтобы разрешить голосовать заново — нажми <b>Сменить голос</b> в нужной номинации.
+          <span class="muted">Важно:</span> ограничение “1 голос” сейчас по устройству/браузеру (device_id). Для “1 голос = 1 человек” нужен логин (Google/Discord).
         </p>
       </div>
-      <div class="pill" id="globalState">Firebase: подключаемся…</div>
+      <div class="pill" id="globalState">Firebase: инициализация…</div>
     </header>
 
     <div class="grid" id="list"></div>
 
     <div class="foot">
-      ✅ YouTube вставляй только embed: <code>https://www.youtube.com/embed/VIDEO_ID</code><br/>
-      ✅ Если MP4 — положи файлы в репу, например <code>videos/meme.mp4</code>
+      ✅ YouTube вставляй в формате embed: <code>https://www.youtube.com/embed/VIDEO_ID</code><br/>
+      ✅ Если MP4 — положи в репозиторий: <code>videos/xxx.mp4</code><br/>
+      ⚠️ Если “не подключается” — открой F12 → Console (там будет причина).
     </div>
   </div>
 
   <script type="module">
+    import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
- import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  increment,
-  deleteField,
-  runTransaction
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      updateDoc,
+      increment,
+      deleteField,
+      runTransaction
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // ==== ТВОЙ firebaseConfig ====
     const firebaseConfig = {
@@ -218,6 +231,7 @@
     // =======================
     // НОМИНАЦИИ (заполни)
     // =======================
+    // Поменяй VIDEO_ID_* и имена номинантов.
     const nominations = [
       { id:"darnitsa-king", title:"Дарница-кинг", hint:"Видео: кто и за что",
         video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_1" },
@@ -257,14 +271,60 @@
         nominees:[ {id:"n1",name:"Чел 1",note:"за что стиль"}, {id:"n2",name:"Чел 2",note:"за что стиль"}, {id:"n3",name:"Чел 3",note:"за что стиль"} ] },
     ];
 
+    // =======================
     // Firebase init
+    // =======================
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const userInfo = document.getElementById("userInfo");
+
+let currentUser = null;
+
+loginBtn.addEventListener("click", async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    console.error(e);
+    alert("Не удалось войти. Проверь Authorized domains и всплывающие окна.");
+  }
+});
+
+logoutBtn.addEventListener("click", async () => {
+  try {
+    await signOut(auth);
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user || null;
+
+  if (currentUser) {
+    loginBtn.disabled = true;
+    logoutBtn.disabled = false;
+    userInfo.textContent = `Вошёл: ${currentUser.displayName || currentUser.email || currentUser.uid}`;
+  } else {
+    loginBtn.disabled = false;
+    logoutBtn.disabled = true;
+    userInfo.textContent = "Не вошёл";
+  }
+
+  // перерисовать UI, чтобы блокировать голосование без входа
+  renderAll();
+});
 
     const globalStateEl = document.getElementById("globalState");
     const listEl = document.getElementById("list");
 
-    // device_id
+    // =======================
+    // device_id (1 голос/устройство)
+    // =======================
     function getDeviceId(){
       let id = localStorage.getItem("device_id");
       if(!id){
@@ -274,88 +334,9 @@
       return id;
     }
 
-    // Firestore: load
-    async function loadResults(nominationId){
-      const ref = doc(db, "votes", nominationId);
-      const snap = await getDoc(ref);
-      if(!snap.exists()) return {};
-      return snap.data().total || {};
-    }
-
-    async function loadDeviceVotes(){
-      const deviceId = getDeviceId();
-      const ref = doc(db, "devices", deviceId);
-      const snap = await getDoc(ref);
-      if(!snap.exists()) return {};
-      return (snap.data().voted || {});
-    }
-
-    // Vote
-import { runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-async function voteForNominee(nominationId, nomineeId){
-  const deviceId = getDeviceId();
-  const deviceRef = doc(db, "devices", deviceId);
-  const voteRef   = doc(db, "votes", nominationId);
-
-  await runTransaction(db, async (tx) => {
-    // 1️⃣ Проверяем, голосовал ли этот девайс
-    const deviceSnap = await tx.get(deviceRef);
-    const voted = deviceSnap.exists() ? (deviceSnap.data().voted || {}) : {};
-    if(voted[nominationId]){
-      throw new Error("ALREADY_VOTED");
-    }
-
-    // 2️⃣ Фиксируем голос устройства
-    tx.set(deviceRef, {
-      voted: { [nominationId]: nomineeId }
-    }, { merge: true });
-
-    // 3️⃣ Увеличиваем общий счётчик
-    const voteSnap = await tx.get(voteRef);
-    if(!voteSnap.exists()){
-      tx.set(voteRef, {
-        total: { [nomineeId]: 1 }
-      });
-    } else {
-      tx.update(voteRef, {
-        [`total.${nomineeId}`]: increment(1)
-      });
-    }
-  });
-
-  return true;
-}
-
-
-
-    // Change vote (снимает блокировку для этой номинации)
-    // ВАЖНО: мы НЕ уменьшаем счетчик старого кандидата (иначе легко накручивать).
-    async function clearVoteForNomination(nominationId){
-  const deviceId = getDeviceId();
-  const deviceRef = doc(db, "devices", deviceId);
-  const voteRef   = doc(db, "votes", nominationId);
-
-  const snap = await getDoc(deviceRef);
-  if(!snap.exists()) return;
-
-  const voted = snap.data().voted || {};
-  const oldNominee = voted[nominationId];
-  if(!oldNominee) return;
-
-  // 1️⃣ уменьшаем счётчик старого кандидата
-  await updateDoc(voteRef, {
-    [`total.${oldNominee}`]: increment(-1)
-  });
-
-  // 2️⃣ удаляем запись о голосе устройства
-  await updateDoc(deviceRef, {
-    [`voted.${nominationId}`]: deleteField()
-  });
-}
-
-
-    // UI
+    // =======================
+    // Helpers
+    // =======================
     function renderVideo(video){
       if(video.type === "youtube"){
         return `
@@ -378,225 +359,319 @@ async function voteForNominee(nominationId, nomineeId){
       `;
     }
 
-    function calcPercents(counts, nominees){
-      const total = nominees.reduce((s,n)=> s + (counts[n.id] || 0), 0);
-      return {
-        total,
-        rows: nominees.map(n => {
-          const c = counts[n.id] || 0;
-          const p = total ? Math.round((c/total)*100) : 0;
-          return { id:n.id, name:n.name, count:c, percent:p };
-        })
-      };
-    }
-
-    function miniResultsHTML(nominees, counts){
-      const { total, rows } = calcPercents(counts, nominees);
-      const lines = rows
-        .sort((a,b)=> b.count - a.count)
-        .map(r => `${r.name}: <b>${r.count}</b> (${r.percent}%)`)
-        .join("<br/>");
-      return `<span class="muted">Результаты (общие):</span><br/>${lines}<br/><span class="muted">Всего: ${total}</span>`;
-    }
-
     function labelById(nom, nomineeId){
       const found = nom.nominees.find(x=>x.id === nomineeId);
       return found ? found.name : "—";
     }
 
+    function miniResultsHTML(nominees, counts){
+      const total = nominees.reduce((s,n)=> s + (counts[n.id] || 0), 0);
+      const rows = nominees.map(n => {
+        const c = Math.max(0, counts[n.id] || 0);
+        const p = total ? Math.round((c/total)*100) : 0;
+        return {name:n.name, c, p};
+      }).sort((a,b)=> b.c - a.c);
+
+      const lines = rows.map(r => `${r.name}: <b>${r.c}</b> (${r.p}%)`).join("<br/>");
+      return `<span class="muted">Результаты (общие):</span><br/>${lines}<br/><span class="muted">Всего: ${total}</span>`;
+    }
+
+    function normalizeCounts(totalObj){
+      // гарантируем объект без undefined
+      return (totalObj && typeof totalObj === "object") ? totalObj : {};
+    }
+
+    // =======================
+    // Firestore операции
+    // =======================
+    async function loadUserVotes(){
+  if(!currentUser) return {};
+  const ref = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(ref);
+  if(!snap.exists()) return {};
+  return (snap.data().voted || {});
+}
+
+
+    async function loadResults(nominationId){
+      const ref = doc(db, "votes", nominationId);
+      const snap = await getDoc(ref);
+      if(!snap.exists()) return {};
+      return normalizeCounts(snap.data().total);
+    }
+
+    // ГОЛОСОВАНИЕ: транзакция (правильно копит, не сбрасывает в 0)
+   async function voteForNominee(nominationId, nomineeId){
+  if(!currentUser) {
+    alert("Сначала войди через Google");
+    return false;
+  }
+
+  const userRef = doc(db, "users", currentUser.uid);
+  const voteRef = doc(db, "votes", nominationId);
+
+  await runTransaction(db, async (tx) => {
+    const userSnap = await tx.get(userRef);
+    const voted = userSnap.exists() ? (userSnap.data().voted || {}) : {};
+
+    if(voted[nominationId]) throw new Error("ALREADY_VOTED");
+
+    // фиксируем голос пользователя
+    tx.set(userRef, { voted: { [nominationId]: nomineeId } }, { merge: true });
+
+    // +1 к итогам
+    const voteSnap = await tx.get(voteRef);
+    if(!voteSnap.exists()){
+      tx.set(voteRef, { total: { [nomineeId]: 1 } });
+    } else {
+      tx.update(voteRef, { [`total.${nomineeId}`]: increment(1) });
+    }
+  });
+
+  return true;
+}
+
+
+    // СМЕНА ГОЛОСА: -1 старому + снимаем блокировку
+async function clearVoteForNomination(nominationId){
+  if(!currentUser) return;
+
+  const userRef = doc(db, "users", currentUser.uid);
+  const voteRef = doc(db, "votes", nominationId);
+
+  await runTransaction(db, async (tx) => {
+    const userSnap = await tx.get(userRef);
+    if(!userSnap.exists()) return;
+
+    const voted = userSnap.data().voted || {};
+    const oldNominee = voted[nominationId];
+    if(!oldNominee) return;
+
+    const voteSnap = await tx.get(voteRef);
+    if(voteSnap.exists()){
+      const total = voteSnap.data().total || {};
+      const cur = Number(total[oldNominee] || 0);
+      if(cur > 0){
+        tx.update(voteRef, { [`total.${oldNominee}`]: increment(-1) });
+      }
+    }
+
+    tx.update(userRef, { [`voted.${nominationId}`]: deleteField() });
+  });
+}
+
+
+    // =======================
+    // Render
+    // =======================
     async function renderAll(openAfterId = null){
       globalStateEl.textContent = "Firebase: загружаем…";
 
-      let deviceVotes = {};
+      // таймаут, чтобы не висело “вечно”
+      const timeout = new Promise((_, rej) =>
+        setTimeout(() => rej(new Error("TIMEOUT")), 8000)
+      );
+
       try{
-        deviceVotes = await loadDeviceVotes();
+        const data = await Promise.race([
+          (async () => {
+            // ПАРАЛЛЕЛЬНО: deviceVotes + все результаты
+            const [deviceVotes, resultsArr] = await Promise.all([
+              loadUserVotes(),
+              Promise.all(nominations.map(n => loadResults(n.id).catch(() => ({}))))
+            ]);
+
+            const resultsByNom = {};
+            nominations.forEach((n, i) => resultsByNom[n.id] = resultsArr[i] || {});
+            return { deviceVotes, resultsByNom };
+          })(),
+          timeout
+        ]);
+
+        const deviceVotes = data.deviceVotes || {};
+        const resultsByNom = data.resultsByNom || {};
+
+        globalStateEl.textContent = `Firebase: OK • номинаций: ${nominations.length}`;
+        globalStateEl.className = "pill";
+
+        listEl.innerHTML = "";
+        nominations.forEach((nom, idx) => {
+          const votedFor = deviceVotes[nom.id] || null;
+          const counts = normalizeCounts(resultsByNom[nom.id]);
+
+          const card = document.createElement("section");
+          card.className = "card";
+
+          card.innerHTML = `
+            <div class="cardHead" data-toggle="${nom.id}">
+              <div class="titleRow">
+                <p class="nomTitle">${idx+1}. ${nom.title}</p>
+                <p class="hint">${nom.hint}</p>
+              </div>
+              <div class="chev">›</div>
+            </div>
+
+            <div class="content" id="content-${nom.id}">
+              <div class="layout">
+                <div class="videoBox">
+                  <div class="videoTop">
+                    <span>Видео по номинации</span>
+                    <span>${nom.video.type === "youtube" ? "YouTube" : "MP4"}</span>
+                  </div>
+                  ${renderVideo(nom.video)}
+                </div>
+
+                <div class="voteBox">
+                  <div class="voteHeader">
+                    <b>Голосование</b>
+                    <span class="status ${votedFor ? "ok" : ""}" id="status-${nom.id}">
+                      ${votedFor ? `Голос зафиксирован: ${labelById(nom, votedFor)}` : "Выбери вариант"}
+                    </span>
+                  </div>
+
+                  <div class="options" role="radiogroup" aria-label="Выбор номинанта" id="opts-${nom.id}">
+                    ${nom.nominees.map(n => `
+                      <div class="opt"
+                           role="radio"
+                           tabindex="0"
+                           aria-checked="${votedFor === n.id ? "true" : "false"}"
+                           data-nomid="${nom.id}"
+                           data-nominee="${n.id}"
+                           data-locked="${votedFor ? "1" : "0"}">
+                        <p class="name">${n.name}</p>
+                        <p class="note">${n.note || ""}</p>
+                      </div>
+                    `).join("")}
+                  </div>
+
+                  <div class="actions">
+                    <button class="primary" id="voteBtn-${nom.id}" disabled ${votedFor ? "title='Ты уже голосовал'" : ""}>Голосовать</button>
+                    <button id="changeBtn-${nom.id}" ${votedFor ? "" : "disabled"} title="Убирает твой голос из итогов и разрешает выбрать заново">Сменить голос</button>
+                    <button id="reloadBtn-${nom.id}">Обновить</button>
+                  </div>
+
+                  <div class="foot" id="foot-${nom.id}">
+                    ${miniResultsHTML(nom.nominees, counts)}
+                  </div>
+
+                  <div class="foot">
+                    <span class="muted">Твой device_id:</span> <code>${getDeviceId()}</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+
+          listEl.appendChild(card);
+        });
+
+        // toggle
+        document.querySelectorAll("[data-toggle]").forEach(h => {
+          h.addEventListener("click", () => {
+            const id = h.getAttribute("data-toggle");
+            const c = document.getElementById("content-" + id);
+            c.classList.toggle("open");
+            h.querySelector(".chev").textContent = c.classList.contains("open") ? "⌄" : "›";
+          });
+        });
+
+        if(openAfterId){
+          const head = document.querySelector(`[data-toggle="${openAfterId}"]`);
+          if(head){
+            const c = document.getElementById("content-" + openAfterId);
+            if(c && !c.classList.contains("open")) head.click();
+          }
+        }
+
+        // selection buffer
+        const selected = {};
+
+        // choose nominee
+        document.querySelectorAll(".opt").forEach(el => {
+          const activate = () => {
+            const nomId = el.dataset.nomid;
+            const nomineeId = el.dataset.nominee;
+            const locked = el.dataset.locked === "1";
+            if(locked) return;
+
+            selected[nomId] = nomineeId;
+            document.querySelectorAll(`.opt[data-nomid="${nomId}"]`).forEach(x => x.setAttribute("aria-checked","false"));
+            el.setAttribute("aria-checked","true");
+
+            document.getElementById("voteBtn-" + nomId).disabled = false;
+          };
+
+          el.addEventListener("click", activate);
+          el.addEventListener("keydown", (e) => {
+            if(e.key === "Enter" || e.key === " "){
+              e.preventDefault();
+              activate();
+            }
+          });
+        });
+
+        // buttons
+        nominations.forEach(nom => {
+          const voteBtn = document.getElementById("voteBtn-" + nom.id);
+          const changeBtn = document.getElementById("changeBtn-" + nom.id);
+          const reloadBtn = document.getElementById("reloadBtn-" + nom.id);
+
+          voteBtn.addEventListener("click", async () => {
+            const nomineeId = selected[nom.id];
+            if(!nomineeId) return;
+
+            voteBtn.disabled = true;
+            voteBtn.textContent = "Отправляем…";
+
+            try{
+              await voteForNominee(nom.id, nomineeId);
+              alert("✅ Голос засчитан!");
+            }catch(e){
+              if(String(e?.message).includes("ALREADY_VOTED")){
+                alert("❌ Ты уже голосовал в этой номинации");
+              }else{
+                console.error(e);
+                alert("Ошибка голосования. Проверь Firestore Rules/доступ.");
+              }
+            }finally{
+              voteBtn.textContent = "Голосовать";
+              await renderAll(nom.id);
+            }
+          });
+
+          changeBtn.addEventListener("click", async () => {
+            changeBtn.disabled = true;
+            changeBtn.textContent = "Снимаем…";
+            try{
+              await clearVoteForNomination(nom.id);
+              alert("✅ Голос снят. Можешь выбрать заново.");
+            }catch(e){
+              console.error(e);
+              alert("Ошибка снятия голоса. Проверь Rules/доступ.");
+            }finally{
+              changeBtn.textContent = "Сменить голос";
+              await renderAll(nom.id);
+            }
+          });
+
+          reloadBtn.addEventListener("click", async () => {
+            reloadBtn.disabled = true;
+            reloadBtn.textContent = "Обновляем…";
+            try{
+              await renderAll(nom.id);
+            }finally{
+              reloadBtn.disabled = false;
+              reloadBtn.textContent = "Обновить";
+            }
+          });
+        });
+
       }catch(e){
         console.error(e);
-        globalStateEl.textContent = "Firebase: ошибка (проверь Firestore / Rules)";
-        return;
+        globalStateEl.textContent = (String(e?.message) === "TIMEOUT")
+          ? "Firebase: таймаут (проверь интернет/Rules/блокировщики)"
+          : "Firebase: ошибка (смотри Console)";
       }
-
-      const resultsByNom = {};
-      for(const nom of nominations){
-        try{
-          resultsByNom[nom.id] = await loadResults(nom.id);
-        }catch(e){
-          console.error(e);
-          resultsByNom[nom.id] = {};
-        }
-      }
-
-      globalStateEl.textContent = `Firebase: OK • номинаций: ${nominations.length}`;
-      listEl.innerHTML = "";
-
-      nominations.forEach((nom, idx) => {
-        const votedFor = deviceVotes[nom.id] || null;
-        const counts = resultsByNom[nom.id] || {};
-
-        const card = document.createElement("section");
-        card.className = "card";
-
-        card.innerHTML = `
-          <div class="cardHead" data-toggle="${nom.id}">
-            <div class="titleRow">
-              <p class="nomTitle">${idx+1}. ${nom.title}</p>
-              <p class="hint">${nom.hint}</p>
-            </div>
-            <div class="chev">›</div>
-          </div>
-
-          <div class="content" id="content-${nom.id}">
-            <div class="layout">
-              <div class="videoBox">
-                <div class="videoTop">
-                  <span>Видео по номинации</span>
-                  <span>${nom.video.type === "youtube" ? "YouTube" : "MP4"}</span>
-                </div>
-                ${renderVideo(nom.video)}
-              </div>
-
-              <div class="voteBox">
-                <div class="voteHeader">
-                  <b>Голосование</b>
-                  <span class="status" id="status-${nom.id}">
-                    ${votedFor ? `Голос зафиксирован: ${labelById(nom, votedFor)}` : "Выбери вариант"}
-                  </span>
-                </div>
-
-                <div class="options" role="radiogroup" aria-label="Выбор номинанта" id="opts-${nom.id}">
-                  ${nom.nominees.map(n => `
-                    <div class="opt"
-                        role="radio"
-                        tabindex="0"
-                        aria-checked="${(!votedFor && false) || (votedFor === n.id) ? "true" : "false"}"
-                        data-nomid="${nom.id}"
-                        data-nominee="${n.id}"
-                        data-locked="${votedFor ? "1" : "0"}">
-                      <p class="name">${n.name}</p>
-                      <p class="note">${n.note || ""}</p>
-                    </div>
-                  `).join("")}
-                </div>
-
-                <div class="actions">
-                  <button class="primary" id="voteBtn-${nom.id}" disabled ${votedFor ? "title='Ты уже голосовал'" : ""}>Голосовать</button>
-                  <button id="changeBtn-${nom.id}" ${votedFor ? "" : "disabled"} title="Снимает блокировку и позволяет проголосовать заново">Сменить голос</button>
-                  <button id="reloadBtn-${nom.id}">Обновить результаты</button>
-                </div>
-
-                <div class="foot" id="foot-${nom.id}">
-                  ${miniResultsHTML(nom.nominees, counts)}
-                </div>
-
-                <div class="foot">
-                  <span class="muted">Твой device_id:</span> <code>${getDeviceId()}</code>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-
-        listEl.appendChild(card);
-      });
-
-      // раскрытие карточек
-      document.querySelectorAll("[data-toggle]").forEach(h => {
-        h.addEventListener("click", () => {
-          const id = h.getAttribute("data-toggle");
-          const c = document.getElementById("content-" + id);
-          c.classList.toggle("open");
-          h.querySelector(".chev").textContent = c.classList.contains("open") ? "⌄" : "›";
-        });
-      });
-
-      if(openAfterId){
-        const head = document.querySelector(`[data-toggle="${openAfterId}"]`);
-        if(head){
-          const c = document.getElementById("content-" + openAfterId);
-          if(c && !c.classList.contains("open")) head.click();
-        }
-      }
-
-      // выбранное до голосования
-      const selected = {}; // nominationId -> nomineeId
-
-      // выбор номинанта
-      document.querySelectorAll(".opt").forEach(el => {
-        const activate = () => {
-          const nomId = el.dataset.nomid;
-          const nomineeId = el.dataset.nominee;
-          const locked = el.dataset.locked === "1";
-          if(locked) return; // если уже голосовал — выбор блокируем до "Сменить голос"
-
-          selected[nomId] = nomineeId;
-          document.querySelectorAll(`.opt[data-nomid="${nomId}"]`).forEach(x => x.setAttribute("aria-checked","false"));
-          el.setAttribute("aria-checked","true");
-
-          const btn = document.getElementById("voteBtn-" + nomId);
-          btn.disabled = false;
-        };
-
-        el.addEventListener("click", activate);
-        el.addEventListener("keydown", (e) => {
-          if(e.key === "Enter" || e.key === " "){
-            e.preventDefault();
-            activate();
-          }
-        });
-      });
-
-      // кнопки
-      nominations.forEach(nom => {
-        const voteBtn = document.getElementById("voteBtn-" + nom.id);
-        const reloadBtn = document.getElementById("reloadBtn-" + nom.id);
-        const changeBtn = document.getElementById("changeBtn-" + nom.id);
-
-        voteBtn.addEventListener("click", async () => {
-          const nomineeId = selected[nom.id];
-          if(!nomineeId) return;
-
-          voteBtn.disabled = true;
-          voteBtn.textContent = "Отправляем…";
-
-          try {
-  await voteForNominee(nom.id, nomineeId);
-  alert("✅ Голос засчитан!");
-} catch (e) {
-  if (String(e?.message).includes("ALREADY_VOTED")) {
-    alert("❌ Ты уже голосовал в этой номинации");
-  } else {
-    console.error(e);
-    alert("Ошибка голосования (проверь Rules/Firestore).");
-  }
-}
-
-        });
-
-        reloadBtn.addEventListener("click", async () => {
-          reloadBtn.disabled = true;
-          reloadBtn.textContent = "Обновляем…";
-          try{
-            await renderAll(nom.id);
-          }finally{
-            reloadBtn.disabled = false;
-            reloadBtn.textContent = "Обновить результаты";
-          }
-        });
-
-        changeBtn.addEventListener("click", async () => {
-          changeBtn.disabled = true;
-          changeBtn.textContent = "Снимаем…";
-          try{
-            await clearVoteForNomination(nom.id);
-          }catch(e){
-            console.error(e);
-            alert("Не получилось снять голос. Проверь Rules / доступ.");
-          }finally{
-            changeBtn.textContent = "Сменить голос";
-            await renderAll(nom.id);
-          }
-        });
-      });
     }
 
     // старт
