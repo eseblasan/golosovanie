@@ -3,45 +3,46 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Голосование — Slay Awards</title>
+  <title>Slay Awards — голосование</title>
   <style>
     :root{
-      --bg:#0b0b12;
-      --card:#141427;
-      --card2:#1a1a33;
-      --text:#f3f3ff;
-      --muted:#a9a9c6;
-      --ring: rgba(255,79,216,.35);
-      --ok:#7CFFB2;
-      --bad:#ff8a8a;
+      --bg:#0b0b12; --card:#141427; --card2:#1a1a33;
+      --text:#f3f3ff; --muted:#a9a9c6;
+      --ring: rgba(255,79,216,.35); --ok:#7CFFB2; --bad:#ff8a8a;
     }
     *{box-sizing:border-box}
     body{
-      margin:0;
+      margin:0; padding:24px; min-height:100svh;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
       background:
         radial-gradient(1200px 600px at 20% -10%, rgba(255,79,216,.18), transparent 60%),
         radial-gradient(1000px 700px at 80% 0%, rgba(124,77,255,.15), transparent 60%),
         var(--bg);
       color:var(--text);
-      min-height:100svh;
-      padding:24px;
     }
-    .wrap{width:min(1100px, 100%); margin:0 auto;}
+    .wrap{width:min(1100px,100%); margin:0 auto;}
     header{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px;}
     h1{margin:0; font-size: clamp(26px, 3.5vw, 40px); line-height:1.1;}
     .sub{margin:8px 0 0; color:var(--muted); font-size:14px; max-width:92ch;}
     .pill{
-      padding:10px 12px;
+      padding:10px 12px; border-radius:14px; font-size:12px; user-select:none; white-space:nowrap;
       background: linear-gradient(135deg, rgba(255,79,216,.18), rgba(124,77,255,.18));
       border:1px solid rgba(255,255,255,.12);
-      border-radius:14px;
-      font-size:12px;
-      user-select:none;
-      white-space:nowrap;
       height: fit-content;
     }
-    .grid{display:grid; grid-template-columns: 1fr; gap:14px;}
+    .topbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 12px 0 0;}
+    button{
+      appearance:none; border:0; border-radius:14px; padding:10px 12px; font-weight:800;
+      cursor:pointer; color:var(--text); background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.14);
+      transition: transform .12s ease, opacity .12s ease, border-color .12s ease;
+    }
+    button:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.22);}
+    button:disabled{opacity:.45; cursor:not-allowed; transform:none;}
+    .primary{background: linear-gradient(135deg, rgba(255,79,216,.95), rgba(124,77,255,.95));}
+    .userInfo{color:var(--muted); font-size:12px;}
+
+    .grid{display:grid; grid-template-columns: 1fr; gap:14px; margin-top:14px;}
     .card{
       background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 35%), var(--card);
       border:1px solid rgba(255,255,255,.12);
@@ -50,13 +51,8 @@
       overflow:hidden;
     }
     .cardHead{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      padding:14px 16px;
-      cursor:pointer;
-      user-select:none;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:14px 16px; cursor:pointer; user-select:none;
       border-bottom:1px solid rgba(255,255,255,.10);
       background: rgba(255,255,255,.03);
     }
@@ -68,43 +64,24 @@
     .content{display:none; padding:16px;}
     .content.open{display:block;}
 
-    .layout{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:14px;
-    }
-    @media (min-width: 920px){
-      .layout{grid-template-columns: 1.2fr .8fr;}
-    }
+    .layout{display:grid; grid-template-columns: 1fr; gap:14px;}
+    @media (min-width: 920px){ .layout{grid-template-columns: 1.2fr .8fr;} }
 
-    .videoBox{
+    .videoBox, .voteBox{
       background: linear-gradient(180deg, rgba(255,255,255,.07), transparent 45%), var(--card2);
       border:1px solid rgba(255,255,255,.12);
       border-radius:16px;
       overflow:hidden;
     }
+    .voteBox{padding:12px;}
     .videoTop{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:10px 12px;
-      border-bottom:1px solid rgba(255,255,255,.10);
-      color:var(--muted);
-      font-size:12px;
+      display:flex; justify-content:space-between; align-items:center;
+      padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.10);
+      color:var(--muted); font-size:12px;
     }
-    .videoFrame{
-      width:100%;
-      aspect-ratio: 16/9;
-      background: rgba(255,255,255,.04);
-    }
+    .videoFrame{width:100%; aspect-ratio: 16/9; background: rgba(255,255,255,.04);}
     iframe, video{width:100%; height:100%; border:0; display:block;}
 
-    .voteBox{
-      background: linear-gradient(180deg, rgba(255,255,255,.07), transparent 45%), var(--card2);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:16px;
-      padding:12px;
-    }
     .voteHeader{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;}
     .voteHeader b{font-size:13px;}
     .status{color:var(--muted); font-size:12px;}
@@ -116,107 +93,72 @@
     @media (min-width: 920px){ .options{grid-template-columns: repeat(2,1fr);} }
 
     .opt{
-      padding:10px;
-      border-radius:14px;
-      background: rgba(255,255,255,.05);
+      padding:10px; border-radius:14px; background: rgba(255,255,255,.05);
       border:1px solid rgba(255,255,255,.10);
-      cursor:pointer;
-      outline:none;
+      cursor:pointer; outline:none;
       transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
-      min-height:64px;
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      gap:4px;
+      min-height:64px; display:flex; flex-direction:column; justify-content:center; gap:4px;
     }
     .opt:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.18);}
-    .opt[aria-checked="true"]{
-      border-color: rgba(255,79,216,.55);
-      box-shadow: 0 0 0 6px var(--ring);
-    }
+    .opt[aria-checked="true"]{border-color: rgba(255,79,216,.55); box-shadow: 0 0 0 6px var(--ring);}
     .opt .name{font-weight:800; font-size:13px; margin:0;}
     .opt .note{font-size:12px; color:var(--muted); margin:0;}
 
     .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;}
-    button{
-      appearance:none;
-      border:0;
-      border-radius:14px;
-      padding:11px 13px;
-      font-weight:800;
-      cursor:pointer;
-      color:var(--text);
-      background: rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.14);
-      transition: transform .12s ease, opacity .12s ease, border-color .12s ease;
-    }
-    button:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.22);}
-    button:disabled{opacity:.45; cursor:not-allowed; transform:none;}
-    .primary{
-      background: linear-gradient(135deg, rgba(255,79,216,.95), rgba(124,77,255,.95));
-      border:1px solid rgba(255,255,255,.18);
-    }
-
-    .foot{
-      margin-top:12px;
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.45;
-    }
+    .foot{margin-top:12px; color:var(--muted); font-size:12px; line-height:1.45;}
     .muted{color:var(--muted)}
     code{background:rgba(255,255,255,.06); padding:2px 6px; border-radius:8px; border:1px solid rgba(255,255,255,.10)}
   </style>
 </head>
 
 <body>
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 12px 0;">
-  <button id="loginBtn">Войти через Google</button>
-  <button id="logoutBtn" disabled>Выйти</button>
-  <span id="userInfo" style="color:#a9a9c6;font-size:12px;"></span>
-</div>
-
   <div class="wrap">
     <header>
       <div>
         <h1>Slay Awards — голосование</h1>
         <p class="sub">
-          Голоса сохраняются в Firebase Firestore и видны всем. Смена голоса: <b>−1 старому</b> и можно выбрать нового.
+          Результаты видны всем. Голосовать можно только после входа через Google.
+          Смена голоса: <b>−1 старому</b> и можно выбрать нового.
         </p>
-        <p class="sub">
-          <span class="muted">Важно:</span> ограничение “1 голос” сейчас по устройству/браузеру (device_id). Для “1 голос = 1 человек” нужен логин (Google/Discord).
-        </p>
+
+        <div class="topbar">
+          <button class="primary" id="loginBtn">Войти через Google</button>
+          <button id="logoutBtn" disabled>Выйти</button>
+          <span class="userInfo" id="userInfo">Не вошёл</span>
+        </div>
       </div>
+
       <div class="pill" id="globalState">Firebase: инициализация…</div>
     </header>
 
     <div class="grid" id="list"></div>
 
     <div class="foot">
-      ✅ YouTube вставляй в формате embed: <code>https://www.youtube.com/embed/VIDEO_ID</code><br/>
-      ✅ Если MP4 — положи в репозиторий: <code>videos/xxx.mp4</code><br/>
-      ⚠️ Если “не подключается” — открой F12 → Console (там будет причина).
+      ⚠️ Если видишь <code>auth/unauthorized-domain</code> — добавь домен в Firebase:
+      <b>Authentication → Settings → Authorized domains</b> → <code>aseblasan.github.io</code><br/>
+      ✅ YouTube вставляй в формате: <code>https://www.youtube.com/embed/VIDEO_ID</code>
     </div>
   </div>
 
   <script type="module">
-    import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getFirestore,
       doc,
       getDoc,
-      updateDoc,
       increment,
       deleteField,
       runTransaction
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithRedirect,
+      getRedirectResult,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     // ==== ТВОЙ firebaseConfig ====
     const firebaseConfig = {
@@ -229,9 +171,8 @@
     };
 
     // =======================
-    // НОМИНАЦИИ (заполни)
+    // НОМИНАЦИИ (ЗАПОЛНИ)
     // =======================
-    // Поменяй VIDEO_ID_* и имена номинантов.
     const nominations = [
       { id:"darnitsa-king", title:"Дарница-кинг", hint:"Видео: кто и за что",
         video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_1" },
@@ -272,67 +213,53 @@
     ];
 
     // =======================
-    // Firebase init
+    // Init
     // =======================
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
     const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+    const provider = new GoogleAuthProvider();
 
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const userInfo = document.getElementById("userInfo");
-
-let currentUser = null;
-
-loginBtn.addEventListener("click", async () => {
-  try {
-    await signInWithPopup(auth, provider);
-  } catch (e) {
-    console.error(e);
-    alert("Не удалось войти. Проверь Authorized domains и всплывающие окна.");
-  }
-});
-
-logoutBtn.addEventListener("click", async () => {
-  try {
-    await signOut(auth);
-  } catch (e) {
-    console.error(e);
-  }
-});
-
-onAuthStateChanged(auth, (user) => {
-  currentUser = user || null;
-
-  if (currentUser) {
-    loginBtn.disabled = true;
-    logoutBtn.disabled = false;
-    userInfo.textContent = `Вошёл: ${currentUser.displayName || currentUser.email || currentUser.uid}`;
-  } else {
-    loginBtn.disabled = false;
-    logoutBtn.disabled = true;
-    userInfo.textContent = "Не вошёл";
-  }
-
-  // перерисовать UI, чтобы блокировать голосование без входа
-  renderAll();
-});
-
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userInfo = document.getElementById("userInfo");
     const globalStateEl = document.getElementById("globalState");
     const listEl = document.getElementById("list");
 
-    // =======================
-    // device_id (1 голос/устройство)
-    // =======================
-    function getDeviceId(){
-      let id = localStorage.getItem("device_id");
-      if(!id){
-        id = crypto.randomUUID();
-        localStorage.setItem("device_id", id);
+    let currentUser = null;
+
+    // ВАЖНО для redirect: ловим результат входа
+    getRedirectResult(auth).catch(console.error);
+
+    loginBtn.addEventListener("click", async () => {
+      try{
+        await signInWithRedirect(auth, provider);
+      }catch(e){
+        console.error(e);
+        alert("Не удалось войти (redirect). Смотри Console.");
       }
-      return id;
-    }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      try{ await signOut(auth); } catch(e){ console.error(e); }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user || null;
+
+      if(currentUser){
+        loginBtn.disabled = true;
+        logoutBtn.disabled = false;
+        userInfo.textContent = `Вошёл: ${currentUser.displayName || currentUser.email || currentUser.uid}`;
+      }else{
+        loginBtn.disabled = false;
+        logoutBtn.disabled = true;
+        userInfo.textContent = "Не вошёл";
+      }
+
+      renderAll();
+    });
 
     // =======================
     // Helpers
@@ -364,6 +291,10 @@ onAuthStateChanged(auth, (user) => {
       return found ? found.name : "—";
     }
 
+    function normalizeCounts(totalObj){
+      return (totalObj && typeof totalObj === "object") ? totalObj : {};
+    }
+
     function miniResultsHTML(nominees, counts){
       const total = nominees.reduce((s,n)=> s + (counts[n.id] || 0), 0);
       const rows = nominees.map(n => {
@@ -376,90 +307,85 @@ onAuthStateChanged(auth, (user) => {
       return `<span class="muted">Результаты (общие):</span><br/>${lines}<br/><span class="muted">Всего: ${total}</span>`;
     }
 
-    function normalizeCounts(totalObj){
-      // гарантируем объект без undefined
-      return (totalObj && typeof totalObj === "object") ? totalObj : {};
-    }
-
     // =======================
-    // Firestore операции
+    // Firestore
     // =======================
     async function loadUserVotes(){
-  if(!currentUser) return {};
-  const ref = doc(db, "users", currentUser.uid);
-  const snap = await getDoc(ref);
-  if(!snap.exists()) return {};
-  return (snap.data().voted || {});
-}
-
+      if(!currentUser) return {};
+      const ref = doc(db, "users", currentUser.uid);
+      const snap = await docGetSafe(ref);
+      if(!snap) return {};
+      return (snap.data().voted || {});
+    }
 
     async function loadResults(nominationId){
       const ref = doc(db, "votes", nominationId);
-      const snap = await getDoc(ref);
-      if(!snap.exists()) return {};
+      const snap = await docGetSafe(ref);
+      if(!snap) return {};
       return normalizeCounts(snap.data().total);
     }
 
-    // ГОЛОСОВАНИЕ: транзакция (правильно копит, не сбрасывает в 0)
-   async function voteForNominee(nominationId, nomineeId){
-  if(!currentUser) {
-    alert("Сначала войди через Google");
-    return false;
-  }
-
-  const userRef = doc(db, "users", currentUser.uid);
-  const voteRef = doc(db, "votes", nominationId);
-
-  await runTransaction(db, async (tx) => {
-    const userSnap = await tx.get(userRef);
-    const voted = userSnap.exists() ? (userSnap.data().voted || {}) : {};
-
-    if(voted[nominationId]) throw new Error("ALREADY_VOTED");
-
-    // фиксируем голос пользователя
-    tx.set(userRef, { voted: { [nominationId]: nomineeId } }, { merge: true });
-
-    // +1 к итогам
-    const voteSnap = await tx.get(voteRef);
-    if(!voteSnap.exists()){
-      tx.set(voteRef, { total: { [nomineeId]: 1 } });
-    } else {
-      tx.update(voteRef, { [`total.${nomineeId}`]: increment(1) });
-    }
-  });
-
-  return true;
-}
-
-
-    // СМЕНА ГОЛОСА: -1 старому + снимаем блокировку
-async function clearVoteForNomination(nominationId){
-  if(!currentUser) return;
-
-  const userRef = doc(db, "users", currentUser.uid);
-  const voteRef = doc(db, "votes", nominationId);
-
-  await runTransaction(db, async (tx) => {
-    const userSnap = await tx.get(userRef);
-    if(!userSnap.exists()) return;
-
-    const voted = userSnap.data().voted || {};
-    const oldNominee = voted[nominationId];
-    if(!oldNominee) return;
-
-    const voteSnap = await tx.get(voteRef);
-    if(voteSnap.exists()){
-      const total = voteSnap.data().total || {};
-      const cur = Number(total[oldNominee] || 0);
-      if(cur > 0){
-        tx.update(voteRef, { [`total.${oldNominee}`]: increment(-1) });
+    async function docGetSafe(ref){
+      try{
+        const snap = await getDoc(ref);
+        if(!snap.exists()) return null;
+        return snap;
+      }catch(e){
+        console.error(e);
+        throw e;
       }
     }
 
-    tx.update(userRef, { [`voted.${nominationId}`]: deleteField() });
-  });
-}
+    async function voteForNominee(nominationId, nomineeId){
+      if(!currentUser) throw new Error("NOT_AUTH");
 
+      const userRef = doc(db, "users", currentUser.uid);
+      const voteRef = doc(db, "votes", nominationId);
+
+      await runTransaction(db, async (tx) => {
+        const userSnap = await tx.get(userRef);
+        const voted = userSnap.exists() ? (userSnap.data().voted || {}) : {};
+        if(voted[nominationId]) throw new Error("ALREADY_VOTED");
+
+        tx.set(userRef, { voted: { [nominationId]: nomineeId } }, { merge: true });
+
+        const voteSnap = await tx.get(voteRef);
+        if(!voteSnap.exists()){
+          tx.set(voteRef, { total: { [nomineeId]: 1 } });
+        }else{
+          tx.update(voteRef, { [`total.${nomineeId}`]: increment(1) });
+        }
+      });
+
+      return true;
+    }
+
+    async function clearVoteForNomination(nominationId){
+      if(!currentUser) throw new Error("NOT_AUTH");
+
+      const userRef = doc(db, "users", currentUser.uid);
+      const voteRef = doc(db, "votes", nominationId);
+
+      await runTransaction(db, async (tx) => {
+        const userSnap = await tx.get(userRef);
+        if(!userSnap.exists()) return;
+
+        const voted = userSnap.data().voted || {};
+        const oldNominee = voted[nominationId];
+        if(!oldNominee) return;
+
+        const voteSnap = await tx.get(voteRef);
+        if(voteSnap.exists()){
+          const total = normalizeCounts(voteSnap.data().total);
+          const cur = Number(total[oldNominee] || 0);
+          if(cur > 0){
+            tx.update(voteRef, { [`total.${oldNominee}`]: increment(-1) });
+          }
+        }
+
+        tx.update(userRef, { [`voted.${nominationId}`]: deleteField() });
+      });
+    }
 
     // =======================
     // Render
@@ -467,41 +393,36 @@ async function clearVoteForNomination(nominationId){
     async function renderAll(openAfterId = null){
       globalStateEl.textContent = "Firebase: загружаем…";
 
-      // таймаут, чтобы не висело “вечно”
-      const timeout = new Promise((_, rej) =>
-        setTimeout(() => rej(new Error("TIMEOUT")), 8000)
-      );
+      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT")), 8000));
 
       try{
         const data = await Promise.race([
           (async () => {
-            // ПАРАЛЛЕЛЬНО: deviceVotes + все результаты
-            const [deviceVotes, resultsArr] = await Promise.all([
+            const [userVotes, resultsArr] = await Promise.all([
               loadUserVotes(),
               Promise.all(nominations.map(n => loadResults(n.id).catch(() => ({}))))
             ]);
-
             const resultsByNom = {};
             nominations.forEach((n, i) => resultsByNom[n.id] = resultsArr[i] || {});
-            return { deviceVotes, resultsByNom };
+            return { userVotes, resultsByNom };
           })(),
           timeout
         ]);
 
-        const deviceVotes = data.deviceVotes || {};
+        globalStateEl.textContent = `Firebase: OK • номинаций: ${nominations.length}`;
+
+        const userVotes = data.userVotes || {};
         const resultsByNom = data.resultsByNom || {};
 
-        globalStateEl.textContent = `Firebase: OK • номинаций: ${nominations.length}`;
-        globalStateEl.className = "pill";
-
         listEl.innerHTML = "";
+        const selected = {};
+
         nominations.forEach((nom, idx) => {
-          const votedFor = deviceVotes[nom.id] || null;
+          const votedFor = userVotes[nom.id] || null;
           const counts = normalizeCounts(resultsByNom[nom.id]);
 
           const card = document.createElement("section");
           card.className = "card";
-
           card.innerHTML = `
             <div class="cardHead" data-toggle="${nom.id}">
               <div class="titleRow">
@@ -525,11 +446,11 @@ async function clearVoteForNomination(nominationId){
                   <div class="voteHeader">
                     <b>Голосование</b>
                     <span class="status ${votedFor ? "ok" : ""}" id="status-${nom.id}">
-                      ${votedFor ? `Голос зафиксирован: ${labelById(nom, votedFor)}` : "Выбери вариант"}
+                      ${votedFor ? `Голос зафиксирован: ${labelById(nom, votedFor)}` : (currentUser ? "Выбери вариант" : "Войди через Google чтобы голосовать")}
                     </span>
                   </div>
 
-                  <div class="options" role="radiogroup" aria-label="Выбор номинанта" id="opts-${nom.id}">
+                  <div class="options" role="radiogroup" id="opts-${nom.id}">
                     ${nom.nominees.map(n => `
                       <div class="opt"
                            role="radio"
@@ -537,7 +458,7 @@ async function clearVoteForNomination(nominationId){
                            aria-checked="${votedFor === n.id ? "true" : "false"}"
                            data-nomid="${nom.id}"
                            data-nominee="${n.id}"
-                           data-locked="${votedFor ? "1" : "0"}">
+                           data-locked="${(!currentUser || votedFor) ? "1" : "0"}">
                         <p class="name">${n.name}</p>
                         <p class="note">${n.note || ""}</p>
                       </div>
@@ -545,8 +466,8 @@ async function clearVoteForNomination(nominationId){
                   </div>
 
                   <div class="actions">
-                    <button class="primary" id="voteBtn-${nom.id}" disabled ${votedFor ? "title='Ты уже голосовал'" : ""}>Голосовать</button>
-                    <button id="changeBtn-${nom.id}" ${votedFor ? "" : "disabled"} title="Убирает твой голос из итогов и разрешает выбрать заново">Сменить голос</button>
+                    <button class="primary" id="voteBtn-${nom.id}" disabled ${(!currentUser || votedFor) ? "title='Нужен вход или ты уже голосовал'" : ""}>Голосовать</button>
+                    <button id="changeBtn-${nom.id}" ${(!currentUser || !votedFor) ? "disabled" : ""} title="Снимает твой голос из итогов и разрешает выбрать заново">Сменить голос</button>
                     <button id="reloadBtn-${nom.id}">Обновить</button>
                   </div>
 
@@ -555,7 +476,8 @@ async function clearVoteForNomination(nominationId){
                   </div>
 
                   <div class="foot">
-                    <span class="muted">Твой device_id:</span> <code>${getDeviceId()}</code>
+                    <span class="muted">UID:</span>
+                    <code>${currentUser ? currentUser.uid : "—"}</code>
                   </div>
                 </div>
               </div>
@@ -563,55 +485,40 @@ async function clearVoteForNomination(nominationId){
           `;
 
           listEl.appendChild(card);
-        });
 
-        // toggle
-        document.querySelectorAll("[data-toggle]").forEach(h => {
-          h.addEventListener("click", () => {
-            const id = h.getAttribute("data-toggle");
-            const c = document.getElementById("content-" + id);
+          // toggle
+          card.querySelector("[data-toggle]").addEventListener("click", () => {
+            const c = document.getElementById("content-" + nom.id);
             c.classList.toggle("open");
-            h.querySelector(".chev").textContent = c.classList.contains("open") ? "⌄" : "›";
+            card.querySelector(".chev").textContent = c.classList.contains("open") ? "⌄" : "›";
           });
-        });
 
-        if(openAfterId){
-          const head = document.querySelector(`[data-toggle="${openAfterId}"]`);
-          if(head){
-            const c = document.getElementById("content-" + openAfterId);
-            if(c && !c.classList.contains("open")) head.click();
-          }
-        }
+          // options
+          card.querySelectorAll(".opt").forEach(el => {
+            const activate = () => {
+              const nomId = el.dataset.nomid;
+              const nomineeId = el.dataset.nominee;
+              const locked = el.dataset.locked === "1";
+              if(locked) return;
 
-        // selection buffer
-        const selected = {};
+              selected[nomId] = nomineeId;
+              card.querySelectorAll(`.opt[data-nomid="${nomId}"]`).forEach(x => x.setAttribute("aria-checked","false"));
+              el.setAttribute("aria-checked","true");
 
-        // choose nominee
-        document.querySelectorAll(".opt").forEach(el => {
-          const activate = () => {
-            const nomId = el.dataset.nomid;
-            const nomineeId = el.dataset.nominee;
-            const locked = el.dataset.locked === "1";
-            if(locked) return;
+              const voteBtn = document.getElementById("voteBtn-" + nomId);
+              voteBtn.disabled = false;
+            };
 
-            selected[nomId] = nomineeId;
-            document.querySelectorAll(`.opt[data-nomid="${nomId}"]`).forEach(x => x.setAttribute("aria-checked","false"));
-            el.setAttribute("aria-checked","true");
-
-            document.getElementById("voteBtn-" + nomId).disabled = false;
-          };
-
-          el.addEventListener("click", activate);
-          el.addEventListener("keydown", (e) => {
-            if(e.key === "Enter" || e.key === " "){
-              e.preventDefault();
-              activate();
-            }
+            el.addEventListener("click", activate);
+            el.addEventListener("keydown", (e) => {
+              if(e.key === "Enter" || e.key === " "){
+                e.preventDefault();
+                activate();
+              }
+            });
           });
-        });
 
-        // buttons
-        nominations.forEach(nom => {
+          // buttons
           const voteBtn = document.getElementById("voteBtn-" + nom.id);
           const changeBtn = document.getElementById("changeBtn-" + nom.id);
           const reloadBtn = document.getElementById("reloadBtn-" + nom.id);
@@ -627,12 +534,10 @@ async function clearVoteForNomination(nominationId){
               await voteForNominee(nom.id, nomineeId);
               alert("✅ Голос засчитан!");
             }catch(e){
-              if(String(e?.message).includes("ALREADY_VOTED")){
-                alert("❌ Ты уже голосовал в этой номинации");
-              }else{
-                console.error(e);
-                alert("Ошибка голосования. Проверь Firestore Rules/доступ.");
-              }
+              console.error(e);
+              if(String(e?.message).includes("NOT_AUTH")) alert("Сначала войди через Google");
+              else if(String(e?.message).includes("ALREADY_VOTED")) alert("Ты уже голосовал в этой номинации");
+              else alert("Ошибка голосования. Смотри Console.");
             }finally{
               voteBtn.textContent = "Голосовать";
               await renderAll(nom.id);
@@ -644,10 +549,11 @@ async function clearVoteForNomination(nominationId){
             changeBtn.textContent = "Снимаем…";
             try{
               await clearVoteForNomination(nom.id);
-              alert("✅ Голос снят. Можешь выбрать заново.");
+              alert("✅ Голос снят. Выбирай заново.");
             }catch(e){
               console.error(e);
-              alert("Ошибка снятия голоса. Проверь Rules/доступ.");
+              if(String(e?.message).includes("NOT_AUTH")) alert("Сначала войди через Google");
+              else alert("Ошибка снятия голоса. Смотри Console.");
             }finally{
               changeBtn.textContent = "Сменить голос";
               await renderAll(nom.id);
@@ -657,25 +563,24 @@ async function clearVoteForNomination(nominationId){
           reloadBtn.addEventListener("click", async () => {
             reloadBtn.disabled = true;
             reloadBtn.textContent = "Обновляем…";
-            try{
-              await renderAll(nom.id);
-            }finally{
-              reloadBtn.disabled = false;
-              reloadBtn.textContent = "Обновить";
-            }
+            try{ await renderAll(nom.id); }
+            finally{ reloadBtn.disabled = false; reloadBtn.textContent = "Обновить"; }
           });
         });
 
+        if(openAfterId){
+          const head = document.querySelector(`[data-toggle="${openAfterId}"]`);
+          if(head) head.click();
+        }
+
       }catch(e){
         console.error(e);
-        globalStateEl.textContent = (String(e?.message) === "TIMEOUT")
-          ? "Firebase: таймаут (проверь интернет/Rules/блокировщики)"
-          : "Firebase: ошибка (смотри Console)";
+        globalStateEl.textContent =
+          (String(e?.message) === "TIMEOUT")
+            ? "Firebase: таймаут (проверь интернет/Rules)"
+            : "Firebase: ошибка (смотри Console)";
       }
     }
-
-    // старт
-    renderAll();
   </script>
 </body>
 </html>
