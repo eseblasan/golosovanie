@@ -28,7 +28,7 @@
     .wrap{width:min(1100px, 100%); margin:0 auto;}
     header{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px;}
     h1{margin:0; font-size: clamp(26px, 3.5vw, 40px); line-height:1.1;}
-    .sub{margin:8px 0 0; color:var(--muted); font-size:14px; max-width:80ch;}
+    .sub{margin:8px 0 0; color:var(--muted); font-size:14px; max-width:86ch;}
     .pill{
       padding:10px 12px;
       background: linear-gradient(135deg, rgba(255,79,216,.18), rgba(124,77,255,.18));
@@ -161,7 +161,6 @@
     }
     .muted{color:var(--muted)}
     code{background:rgba(255,255,255,.06); padding:2px 6px; border-radius:8px; border:1px solid rgba(255,255,255,.10)}
-    .dangerLink{color:#ff8a8a}
   </style>
 </head>
 
@@ -171,12 +170,12 @@
       <div>
         <h1>Голосование по номинациям</h1>
         <p class="sub">
-          У каждой номинации есть <b>видео</b> (чтобы понимать контекст) и выбор номинанта.
-          Голоса сохраняются в общей базе Firebase Firestore (работает на GitHub Pages).
+          У каждой номинации есть <b>видео</b> и выбор номинанта.
+          Голоса сохраняются в Firebase Firestore и видны всем.
         </p>
         <p class="sub">
-          <span class="muted">Важно:</span> ограничение “1 голос” сейчас по <b>устройству/браузеру</b> (через device_id).
-          Если нужна защита “1 голос = 1 человек”, добавим авторизацию Google/Discord.
+          <span class="muted">Важно:</span> “1 голос” сейчас по устройству/браузеру.
+          Чтобы разрешить голосовать заново — нажми <b>Сменить голос</b> в нужной номинации.
         </p>
       </div>
       <div class="pill" id="globalState">Firebase: подключаемся…</div>
@@ -185,17 +184,11 @@
     <div class="grid" id="list"></div>
 
     <div class="foot">
-      ✅ Как вставить видео:
-      <br/>• YouTube: поставь <code>type: "youtube"</code> и <code>url</code> в формате <b>embed</b>: <code>https://www.youtube.com/embed/VIDEO_ID</code>
-      <br/>• MP4 файл: <code>type: "mp4"</code> и путь (например <code>videos/meme.mp4</code>)
-      <br/><br/>
-      Если при голосовании вылезает ошибка “Missing or insufficient permissions” — значит Firestore rules не в test mode.
+      ✅ YouTube вставляй только embed: <code>https://www.youtube.com/embed/VIDEO_ID</code><br/>
+      ✅ Если MP4 — положи файлы в репу, например <code>videos/meme.mp4</code>
     </div>
   </div>
 
-  <!-- ===========================
-       Firebase + Firestore (CDN)
-       =========================== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
@@ -204,7 +197,8 @@
       getDoc,
       setDoc,
       updateDoc,
-      increment
+      increment,
+      deleteField
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // ==== ТВОЙ firebaseConfig ====
@@ -218,158 +212,55 @@
     };
 
     // =======================
-    // ДАННЫЕ (НОМИНАЦИИ)
+    // НОМИНАЦИИ (заполни)
     // =======================
-    // ЗАМЕНИ:
-    // - video.url на свои (YouTube embed или mp4 файл)
-    // - nominees на реальных людей/варианты
     const nominations = [
-      {
-        id: "darnitsa-king",
-        title: "Дарница-кинг",
-        hint: "Видео: кто и за что",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_1" },
-        nominees: [
-          { id: "n1", name: "Номинант 1", note: "за что" },
-          { id: "n2", name: "Номинант 2", note: "за что" },
-          { id: "n3", name: "Номинант 3", note: "за что" },
-        ]
-      },
-      {
-        id: "darnitsa-queen",
-        title: "Дарница-квин",
-        hint: "Видео: кто и за что",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_2" },
-        nominees: [
-          { id: "n1", name: "Номинант 1", note: "за что" },
-          { id: "n2", name: "Номинант 2", note: "за что" },
-          { id: "n3", name: "Номинант 3", note: "за что" },
-        ]
-      },
-      {
-        id: "best-dota",
-        title: "Лучший дота игрок",
-        hint: "Видео хайлайтов / объяснение",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_3" },
-        nominees: [
-          { id: "n1", name: "Игрок 1", note: "роль/тим" },
-          { id: "n2", name: "Игрок 2", note: "роль/тим" },
-          { id: "n3", name: "Игрок 3", note: "роль/тим" },
-        ]
-      },
-      {
-        id: "best-cs",
-        title: "Лучший кс игрок",
-        hint: "Видео хайлайтов / объяснение",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_4" },
-        nominees: [
-          { id: "n1", name: "Игрок 1", note: "роль" },
-          { id: "n2", name: "Игрок 2", note: "роль" },
-          { id: "n3", name: "Игрок 3", note: "роль" },
-        ]
-      },
-      {
-        id: "best",
-        title: "Лучший",
-        hint: "Видео/нарезка почему",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_5" },
-        nominees: [
-          { id: "n1", name: "Вариант 1", note: "почему" },
-          { id: "n2", name: "Вариант 2", note: "почему" },
-          { id: "n3", name: "Вариант 3", note: "почему" },
-        ]
-      },
-      {
-        id: "rollback",
-        title: "Откат года",
-        hint: "Видео: контекст/мем",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_6" },
-        nominees: [
-          { id: "n1", name: "Ситуация 1", note: "что было" },
-          { id: "n2", name: "Ситуация 2", note: "что было" },
-          { id: "n3", name: "Ситуация 3", note: "что было" },
-        ]
-      },
-      {
-        id: "breakthrough",
-        title: "Прорыв года",
-        hint: "Видео: лучшие моменты",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_7" },
-        nominees: [
-          { id: "n1", name: "Номинант 1", note: "результат" },
-          { id: "n2", name: "Номинант 2", note: "результат" },
-          { id: "n3", name: "Номинант 3", note: "результат" },
-        ]
-      },
-      {
-        id: "meme",
-        title: "Мем года",
-        hint: "Видео/мем-компиляция",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_8" },
-        nominees: [
-          { id: "n1", name: "Мем 1", note: "описание" },
-          { id: "n2", name: "Мем 2", note: "описание" },
-          { id: "n3", name: "Мем 3", note: "описание" },
-        ]
-      },
-      {
-        id: "teacher",
-        title: "Учитель года",
-        hint: "Видео: почему это он/она",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_9" },
-        nominees: [
-          { id: "n1", name: "Учитель 1", note: "предмет" },
-          { id: "n2", name: "Учитель 2", note: "предмет" },
-          { id: "n3", name: "Учитель 3", note: "предмет" },
-        ]
-      },
-      {
-        id: "delivery",
-        title: "Завоз года",
-        hint: "Видео: самый мощный завоз",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_10" },
-        nominees: [
-          { id: "n1", name: "Завоз 1", note: "что завезли" },
-          { id: "n2", name: "Завоз 2", note: "что завезли" },
-          { id: "n3", name: "Завоз 3", note: "что завезли" },
-        ]
-      },
-      {
-        id: "track",
-        title: "Трек года",
-        hint: "Видео: клип/тизер",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_11" },
-        nominees: [
-          { id: "n1", name: "Трек 1", note: "исполнитель" },
-          { id: "n2", name: "Трек 2", note: "исполнитель" },
-          { id: "n3", name: "Трек 3", note: "исполнитель" },
-        ]
-      },
-      {
-        id: "style",
-        title: "Стиль года",
-        hint: "Видео: лучшие луки/вайб",
-        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_12" },
-        nominees: [
-          { id: "n1", name: "Чел 1", note: "за что стиль" },
-          { id: "n2", name: "Чел 2", note: "за что стиль" },
-          { id: "n3", name: "Чел 3", note: "за что стиль" },
-        ]
-      },
+      { id:"darnitsa-king", title:"Дарница-кинг", hint:"Видео: кто и за что",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_1" },
+        nominees:[ {id:"n1",name:"Номинант 1",note:"за что"}, {id:"n2",name:"Номинант 2",note:"за что"}, {id:"n3",name:"Номинант 3",note:"за что"} ] },
+      { id:"darnitsa-queen", title:"Дарница-квин", hint:"Видео: кто и за что",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_2" },
+        nominees:[ {id:"n1",name:"Номинант 1",note:"за что"}, {id:"n2",name:"Номинант 2",note:"за что"}, {id:"n3",name:"Номинант 3",note:"за что"} ] },
+      { id:"best-dota", title:"Лучший дота игрок", hint:"Видео хайлайтов / объяснение",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_3" },
+        nominees:[ {id:"n1",name:"Игрок 1",note:"роль/тим"}, {id:"n2",name:"Игрок 2",note:"роль/тим"}, {id:"n3",name:"Игрок 3",note:"роль/тим"} ] },
+      { id:"best-cs", title:"Лучший кс игрок", hint:"Видео хайлайтов / объяснение",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_4" },
+        nominees:[ {id:"n1",name:"Игрок 1",note:"роль"}, {id:"n2",name:"Игрок 2",note:"роль"}, {id:"n3",name:"Игрок 3",note:"роль"} ] },
+      { id:"best", title:"Лучший", hint:"Видео/нарезка почему",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_5" },
+        nominees:[ {id:"n1",name:"Вариант 1",note:"почему"}, {id:"n2",name:"Вариант 2",note:"почему"}, {id:"n3",name:"Вариант 3",note:"почему"} ] },
+      { id:"rollback", title:"Откат года", hint:"Видео: контекст/мем",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_6" },
+        nominees:[ {id:"n1",name:"Ситуация 1",note:"что было"}, {id:"n2",name:"Ситуация 2",note:"что было"}, {id:"n3",name:"Ситуация 3",note:"что было"} ] },
+      { id:"breakthrough", title:"Прорыв года", hint:"Видео: лучшие моменты",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_7" },
+        nominees:[ {id:"n1",name:"Номинант 1",note:"результат"}, {id:"n2",name:"Номинант 2",note:"результат"}, {id:"n3",name:"Номинант 3",note:"результат"} ] },
+      { id:"meme", title:"Мем года", hint:"Видео/мем-компиляция",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_8" },
+        nominees:[ {id:"n1",name:"Мем 1",note:"описание"}, {id:"n2",name:"Мем 2",note:"описание"}, {id:"n3",name:"Мем 3",note:"описание"} ] },
+      { id:"teacher", title:"Учитель года", hint:"Видео: почему это он/она",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_9" },
+        nominees:[ {id:"n1",name:"Учитель 1",note:"предмет"}, {id:"n2",name:"Учитель 2",note:"предмет"}, {id:"n3",name:"Учитель 3",note:"предмет"} ] },
+      { id:"delivery", title:"Завоз года", hint:"Видео: самый мощный завоз",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_10" },
+        nominees:[ {id:"n1",name:"Завоз 1",note:"что завезли"}, {id:"n2",name:"Завоз 2",note:"что завезли"}, {id:"n3",name:"Завоз 3",note:"что завезли"} ] },
+      { id:"track", title:"Трек года", hint:"Видео: клип/тизер",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_11" },
+        nominees:[ {id:"n1",name:"Трек 1",note:"исполнитель"}, {id:"n2",name:"Трек 2",note:"исполнитель"}, {id:"n3",name:"Трек 3",note:"исполнитель"} ] },
+      { id:"style", title:"Стиль года", hint:"Видео: лучшие луки/вайб",
+        video:{ type:"youtube", url:"https://www.youtube.com/embed/VIDEO_ID_12" },
+        nominees:[ {id:"n1",name:"Чел 1",note:"за что стиль"}, {id:"n2",name:"Чел 2",note:"за что стиль"}, {id:"n3",name:"Чел 3",note:"за что стиль"} ] },
     ];
 
-    // =======================
     // Firebase init
-    // =======================
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     const globalStateEl = document.getElementById("globalState");
     const listEl = document.getElementById("list");
 
-    // =======================
-    // device_id (1 голос/устройство)
-    // =======================
+    // device_id
     function getDeviceId(){
       let id = localStorage.getItem("device_id");
       if(!id){
@@ -379,9 +270,7 @@
       return id;
     }
 
-    // =======================
-    // Firestore: load/save
-    // =======================
+    // Firestore: load
     async function loadResults(nominationId){
       const ref = doc(db, "votes", nominationId);
       const snap = await getDoc(ref);
@@ -397,6 +286,7 @@
       return (snap.data().voted || {});
     }
 
+    // Vote
     async function voteForNominee(nominationId, nomineeId){
       const deviceId = getDeviceId();
       const deviceRef = doc(db, "devices", deviceId);
@@ -406,19 +296,22 @@
       if(deviceSnap.exists()){
         const voted = deviceSnap.data().voted || {};
         if(voted[nominationId]){
-          alert("❌ Ты уже голосовал в этой номинации");
+          alert("❌ Ты уже голосовал в этой номинации. Нажми «Сменить голос», если надо заново.");
           return false;
         }
       }
 
+      // фиксируем голос устройства
       await setDoc(deviceRef, {
         voted: { [nominationId]: nomineeId }
       }, { merge: true });
 
+      // гарантируем наличие поля
       await setDoc(voteRef, {
         total: { [nomineeId]: 0 }
       }, { merge: true });
 
+      // +1 к счетчику
       await updateDoc(voteRef, {
         [`total.${nomineeId}`]: increment(1)
       });
@@ -426,9 +319,25 @@
       return true;
     }
 
-    // =======================
-    // UI helpers
-    // =======================
+    // Change vote (снимает блокировку для этой номинации)
+    // ВАЖНО: мы НЕ уменьшаем счетчик старого кандидата (иначе легко накручивать).
+    async function clearVoteForNomination(nominationId){
+      const deviceId = getDeviceId();
+      const deviceRef = doc(db, "devices", deviceId);
+
+      const snap = await getDoc(deviceRef);
+      if(!snap.exists()) return;
+
+      const voted = snap.data().voted || {};
+      if(!voted[nominationId]) return;
+
+      // удаляем поле voted.<nominationId>
+      await updateDoc(deviceRef, {
+        [`voted.${nominationId}`]: deleteField()
+      });
+    }
+
+    // UI
     function renderVideo(video){
       if(video.type === "youtube"){
         return `
@@ -472,10 +381,12 @@
       return `<span class="muted">Результаты (общие):</span><br/>${lines}<br/><span class="muted">Всего: ${total}</span>`;
     }
 
-    // =======================
-    // Render all
-    // =======================
-    async function renderAll(){
+    function labelById(nom, nomineeId){
+      const found = nom.nominees.find(x=>x.id === nomineeId);
+      return found ? found.name : "—";
+    }
+
+    async function renderAll(openAfterId = null){
       globalStateEl.textContent = "Firebase: загружаем…";
 
       let deviceVotes = {};
@@ -483,11 +394,10 @@
         deviceVotes = await loadDeviceVotes();
       }catch(e){
         console.error(e);
-        globalStateEl.textContent = "Firebase: ошибка чтения (проверь Firestore)";
+        globalStateEl.textContent = "Firebase: ошибка (проверь Firestore / Rules)";
         return;
       }
 
-      // грузим результаты по всем номинациям
       const resultsByNom = {};
       for(const nom of nominations){
         try{
@@ -540,7 +450,7 @@
                     <div class="opt"
                         role="radio"
                         tabindex="0"
-                        aria-checked="${votedFor === n.id ? "true" : "false"}"
+                        aria-checked="${(!votedFor && false) || (votedFor === n.id) ? "true" : "false"}"
                         data-nomid="${nom.id}"
                         data-nominee="${n.id}"
                         data-locked="${votedFor ? "1" : "0"}">
@@ -552,6 +462,7 @@
 
                 <div class="actions">
                   <button class="primary" id="voteBtn-${nom.id}" disabled ${votedFor ? "title='Ты уже голосовал'" : ""}>Голосовать</button>
+                  <button id="changeBtn-${nom.id}" ${votedFor ? "" : "disabled"} title="Снимает блокировку и позволяет проголосовать заново">Сменить голос</button>
                   <button id="reloadBtn-${nom.id}">Обновить результаты</button>
                 </div>
 
@@ -570,7 +481,7 @@
         listEl.appendChild(card);
       });
 
-      // Toggle open/close
+      // раскрытие карточек
       document.querySelectorAll("[data-toggle]").forEach(h => {
         h.addEventListener("click", () => {
           const id = h.getAttribute("data-toggle");
@@ -580,16 +491,24 @@
         });
       });
 
-      // Selection buffer for each nomination (before vote)
-      const selected = {};
+      if(openAfterId){
+        const head = document.querySelector(`[data-toggle="${openAfterId}"]`);
+        if(head){
+          const c = document.getElementById("content-" + openAfterId);
+          if(c && !c.classList.contains("open")) head.click();
+        }
+      }
 
-      // Radio pick
+      // выбранное до голосования
+      const selected = {}; // nominationId -> nomineeId
+
+      // выбор номинанта
       document.querySelectorAll(".opt").forEach(el => {
         const activate = () => {
           const nomId = el.dataset.nomid;
           const nomineeId = el.dataset.nominee;
           const locked = el.dataset.locked === "1";
-          if(locked) return; // уже голосовал — не даем менять
+          if(locked) return; // если уже голосовал — выбор блокируем до "Сменить голос"
 
           selected[nomId] = nomineeId;
           document.querySelectorAll(`.opt[data-nomid="${nomId}"]`).forEach(x => x.setAttribute("aria-checked","false"));
@@ -608,10 +527,11 @@
         });
       });
 
-      // Vote buttons
+      // кнопки
       nominations.forEach(nom => {
         const voteBtn = document.getElementById("voteBtn-" + nom.id);
         const reloadBtn = document.getElementById("reloadBtn-" + nom.id);
+        const changeBtn = document.getElementById("changeBtn-" + nom.id);
 
         voteBtn.addEventListener("click", async () => {
           const nomineeId = selected[nom.id];
@@ -622,21 +542,13 @@
 
           try{
             const ok = await voteForNominee(nom.id, nomineeId);
-            if(ok){
-              alert("✅ Голос засчитан!");
-            }
+            if(ok) alert("✅ Голос засчитан!");
           }catch(e){
             console.error(e);
-            alert("Ошибка голосования. Проверь Firestore и правила доступа.");
+            alert("Ошибка голосования. Проверь Firestore и правила доступа (Rules).");
           }finally{
             voteBtn.textContent = "Голосовать";
-            await renderAll();
-            // раскрыть карточку обратно
-            const head = document.querySelector(`[data-toggle="${nom.id}"]`);
-            if(head){
-              const c = document.getElementById("content-" + nom.id);
-              if(c && !c.classList.contains("open")) head.click();
-            }
+            await renderAll(nom.id);
           }
         });
 
@@ -644,29 +556,31 @@
           reloadBtn.disabled = true;
           reloadBtn.textContent = "Обновляем…";
           try{
-            await renderAll();
+            await renderAll(nom.id);
           }finally{
             reloadBtn.disabled = false;
             reloadBtn.textContent = "Обновить результаты";
-            // раскрыть карточку обратно
-            const head = document.querySelector(`[data-toggle="${nom.id}"]`);
-            if(head){
-              const c = document.getElementById("content-" + nom.id);
-              if(c && !c.classList.contains("open")) head.click();
-            }
+          }
+        });
+
+        changeBtn.addEventListener("click", async () => {
+          changeBtn.disabled = true;
+          changeBtn.textContent = "Снимаем…";
+          try{
+            await clearVoteForNomination(nom.id);
+          }catch(e){
+            console.error(e);
+            alert("Не получилось снять голос. Проверь Rules / доступ.");
+          }finally{
+            changeBtn.textContent = "Сменить голос";
+            await renderAll(nom.id);
           }
         });
       });
     }
 
-    function labelById(nom, nomineeId){
-      const found = nom.nominees.find(x=>x.id === nomineeId);
-      return found ? found.name : "—";
-    }
-
     // старт
     renderAll();
-
   </script>
 </body>
 </html>
