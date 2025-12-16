@@ -191,15 +191,19 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getFirestore,
-      doc,
-      getDoc,
-      setDoc,
-      updateDoc,
-      increment,
-      deleteField
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+ import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  increment,
+  deleteField,
+  runTransaction
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
 
     // ==== ТВОЙ firebaseConfig ====
     const firebaseConfig = {
@@ -287,37 +291,43 @@
     }
 
     // Vote
-    async function voteForNominee(nominationId, nomineeId){
-      const deviceId = getDeviceId();
-      const deviceRef = doc(db, "devices", deviceId);
-      const voteRef   = doc(db, "votes", nominationId);
+import { runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-      const deviceSnap = await getDoc(deviceRef);
-      if(deviceSnap.exists()){
-        const voted = deviceSnap.data().voted || {};
-        if(voted[nominationId]){
-          alert("❌ Ты уже голосовал в этой номинации. Нажми «Сменить голос», если надо заново.");
-          return false;
-        }
-      }
+async function voteForNominee(nominationId, nomineeId){
+  const deviceId = getDeviceId();
+  const deviceRef = doc(db, "devices", deviceId);
+  const voteRef   = doc(db, "votes", nominationId);
 
-      // фиксируем голос устройства
-      await setDoc(deviceRef, {
-        voted: { [nominationId]: nomineeId }
-      }, { merge: true });
+  await runTransaction(db, async (tx) => {
+    // 1️⃣ Проверяем, голосовал ли этот девайс
+    const deviceSnap = await tx.get(deviceRef);
+    const voted = deviceSnap.exists() ? (deviceSnap.data().voted || {}) : {};
+    if(voted[nominationId]){
+      throw new Error("ALREADY_VOTED");
+    }
 
-      // гарантируем наличие поля
-      await setDoc(voteRef, {
-        total: { [nomineeId]: 0 }
-      }, { merge: true });
+    // 2️⃣ Фиксируем голос устройства
+    tx.set(deviceRef, {
+      voted: { [nominationId]: nomineeId }
+    }, { merge: true });
 
-      // +1 к счетчику
-      await updateDoc(voteRef, {
+    // 3️⃣ Увеличиваем общий счётчик
+    const voteSnap = await tx.get(voteRef);
+    if(!voteSnap.exists()){
+      tx.set(voteRef, {
+        total: { [nomineeId]: 1 }
+      });
+    } else {
+      tx.update(voteRef, {
         [`total.${nomineeId}`]: increment(1)
       });
-
-      return true;
     }
+  });
+
+  return true;
+}
+
+
 
     // Change vote (снимает блокировку для этой номинации)
     // ВАЖНО: мы НЕ уменьшаем счетчик старого кандидата (иначе легко накручивать).
@@ -548,16 +558,18 @@
           voteBtn.disabled = true;
           voteBtn.textContent = "Отправляем…";
 
-          try{
-            const ok = await voteForNominee(nom.id, nomineeId);
-            if(ok) alert("✅ Голос засчитан!");
-          }catch(e){
-            console.error(e);
-            alert("Ошибка голосования. Проверь Firestore и правила доступа (Rules).");
-          }finally{
-            voteBtn.textContent = "Голосовать";
-            await renderAll(nom.id);
-          }
+          try {
+  await voteForNominee(nom.id, nomineeId);
+  alert("✅ Голос засчитан!");
+} catch (e) {
+  if (String(e?.message).includes("ALREADY_VOTED")) {
+    alert("❌ Ты уже голосовал в этой номинации");
+  } else {
+    console.error(e);
+    alert("Ошибка голосования (проверь Rules/Firestore).");
+  }
+}
+
         });
 
         reloadBtn.addEventListener("click", async () => {
