@@ -152,16 +152,17 @@
     
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    import {
-        setPersistence,
-browserLocalPersistence,
-      getAuth,
-      GoogleAuthProvider,
-      signInWithRedirect,
-      getRedirectResult,
-      signOut,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
+  signOut,
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 
     // ==== ТВОЙ firebaseConfig ====
     const firebaseConfig = {
@@ -222,8 +223,21 @@ browserLocalPersistence,
     const db = getFirestore(app);
 
     const auth = getAuth(app);
-    setPersistence(auth, browserLocalPersistence).catch(console.error);
-    const provider = new GoogleAuthProvider();
+// 1️⃣ сохраняем сессию в браузере
+setPersistence(auth, browserLocalPersistence).catch(console.error);
+
+// 2️⃣ Google provider
+const provider = new GoogleAuthProvider();
+
+// 3️⃣ ловим результат redirect (ТОЛЬКО ОДИН РАЗ)
+(async () => {
+  try {
+    const res = await getRedirectResult(auth);
+    console.log("redirect result:", res?.user?.uid || "none");
+  } catch (e) {
+    console.error("getRedirectResult error:", e);
+  }
+})();
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const userInfo = document.getElementById("userInfo");
