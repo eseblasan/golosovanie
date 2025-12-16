@@ -322,20 +322,28 @@
     // Change vote (снимает блокировку для этой номинации)
     // ВАЖНО: мы НЕ уменьшаем счетчик старого кандидата (иначе легко накручивать).
     async function clearVoteForNomination(nominationId){
-      const deviceId = getDeviceId();
-      const deviceRef = doc(db, "devices", deviceId);
+  const deviceId = getDeviceId();
+  const deviceRef = doc(db, "devices", deviceId);
+  const voteRef   = doc(db, "votes", nominationId);
 
-      const snap = await getDoc(deviceRef);
-      if(!snap.exists()) return;
+  const snap = await getDoc(deviceRef);
+  if(!snap.exists()) return;
 
-      const voted = snap.data().voted || {};
-      if(!voted[nominationId]) return;
+  const voted = snap.data().voted || {};
+  const oldNominee = voted[nominationId];
+  if(!oldNominee) return;
 
-      // удаляем поле voted.<nominationId>
-      await updateDoc(deviceRef, {
-        [`voted.${nominationId}`]: deleteField()
-      });
-    }
+  // 1️⃣ уменьшаем счётчик старого кандидата
+  await updateDoc(voteRef, {
+    [`total.${oldNominee}`]: increment(-1)
+  });
+
+  // 2️⃣ удаляем запись о голосе устройства
+  await updateDoc(deviceRef, {
+    [`voted.${nominationId}`]: deleteField()
+  });
+}
+
 
     // UI
     function renderVideo(video){
