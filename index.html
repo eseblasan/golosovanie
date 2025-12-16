@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Голосование — Номинации</title>
+  <style>
+    :root{
+      --bg:#0b0b12;
+      --card:#141427;
+      --card2:#1a1a33;
+      --text:#f3f3ff;
+      --muted:#a9a9c6;
+      --ring: rgba(255,79,216,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:
+        radial-gradient(1200px 600px at 20% -10%, rgba(255,79,216,.18), transparent 60%),
+        radial-gradient(1000px 700px at 80% 0%, rgba(124,77,255,.15), transparent 60%),
+        var(--bg);
+      color:var(--text);
+      min-height:100svh;
+      padding:24px;
+    }
+    .wrap{width:min(1100px, 100%); margin:0 auto;}
+    header{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px;}
+    h1{margin:0; font-size: clamp(26px, 3.5vw, 40px); line-height:1.1;}
+    .sub{margin:8px 0 0; color:var(--muted); font-size:14px; max-width:80ch;}
+    .pill{
+      padding:10px 12px;
+      background: linear-gradient(135deg, rgba(255,79,216,.18), rgba(124,77,255,.18));
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      font-size:12px;
+      user-select:none;
+      white-space:nowrap;
+      height: fit-content;
+    }
+    .grid{display:grid; grid-template-columns: 1fr; gap:14px;}
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 35%), var(--card);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      box-shadow: 0 18px 45px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .cardHead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:14px 16px;
+      cursor:pointer;
+      user-select:none;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+    }
+    .cardHead:hover{background: rgba(255,255,255,.05);}
+    .titleRow{display:flex; flex-direction:column; gap:4px;}
+    .nomTitle{margin:0; font-size:16px; font-weight:800;}
+    .hint{margin:0; color:var(--muted); font-size:12px;}
+    .chev{opacity:.85; font-size:18px;}
+    .content{display:none; padding:16px;}
+    .content.open{display:block;}
+
+    .layout{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+    @media (min-width: 920px){
+      .layout{grid-template-columns: 1.2fr .8fr;}
+    }
+
+    .videoBox{
+      background: linear-gradient(180deg, rgba(255,255,255,.07), transparent 45%), var(--card2);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      overflow:hidden;
+    }
+    .videoTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      color:var(--muted);
+      font-size:12px;
+    }
+    .videoFrame{
+      width:100%;
+      aspect-ratio: 16/9;
+      background: rgba(255,255,255,.04);
+    }
+    iframe, video{width:100%; height:100%; border:0; display:block;}
+
+    .voteBox{
+      background: linear-gradient(180deg, rgba(255,255,255,.07), transparent 45%), var(--card2);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      padding:12px;
+    }
+    .voteHeader{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;}
+    .voteHeader b{font-size:13px;}
+    .status{color:var(--muted); font-size:12px;}
+
+    .options{display:grid; grid-template-columns: repeat(2,1fr); gap:10px;}
+    @media (min-width: 520px){ .options{grid-template-columns: repeat(3,1fr);} }
+    @media (min-width: 920px){ .options{grid-template-columns: repeat(2,1fr);} }
+
+    .opt{
+      padding:10px;
+      border-radius:14px;
+      background: rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.10);
+      cursor:pointer;
+      outline:none;
+      transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+      min-height:64px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:4px;
+    }
+    .opt:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.18);}
+    .opt[aria-checked="true"]{
+      border-color: rgba(255,79,216,.55);
+      box-shadow: 0 0 0 6px var(--ring);
+    }
+    .opt .name{font-weight:800; font-size:13px; margin:0;}
+    .opt .note{font-size:12px; color:var(--muted); margin:0;}
+
+    .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;}
+    button{
+      appearance:none;
+      border:0;
+      border-radius:14px;
+      padding:11px 13px;
+      font-weight:800;
+      cursor:pointer;
+      color:var(--text);
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.14);
+      transition: transform .12s ease, opacity .12s ease, border-color .12s ease;
+    }
+    button:hover{transform: translateY(-1px); border-color: rgba(255,255,255,.22);}
+    button:disabled{opacity:.45; cursor:not-allowed; transform:none;}
+    .primary{
+      background: linear-gradient(135deg, rgba(255,79,216,.95), rgba(124,77,255,.95));
+      border:1px solid rgba(255,255,255,.18);
+    }
+
+    .foot{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+    .muted{color:var(--muted)}
+    code{background:rgba(255,255,255,.06); padding:2px 6px; border-radius:8px; border:1px solid rgba(255,255,255,.10)}
+    .dangerLink{color:#ff8a8a}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Голосование по номинациям</h1>
+        <p class="sub">
+          У каждой номинации есть <b>видео</b> (чтобы понимать контекст) и выбор номинанта.
+          Голоса сохраняются в общей базе Firebase Firestore (работает на GitHub Pages).
+        </p>
+        <p class="sub">
+          <span class="muted">Важно:</span> ограничение “1 голос” сейчас по <b>устройству/браузеру</b> (через device_id).
+          Если нужна защита “1 голос = 1 человек”, добавим авторизацию Google/Discord.
+        </p>
+      </div>
+      <div class="pill" id="globalState">Firebase: подключаемся…</div>
+    </header>
+
+    <div class="grid" id="list"></div>
+
+    <div class="foot">
+      ✅ Как вставить видео:
+      <br/>• YouTube: поставь <code>type: "youtube"</code> и <code>url</code> в формате <b>embed</b>: <code>https://www.youtube.com/embed/VIDEO_ID</code>
+      <br/>• MP4 файл: <code>type: "mp4"</code> и путь (например <code>videos/meme.mp4</code>)
+      <br/><br/>
+      Если при голосовании вылезает ошибка “Missing or insufficient permissions” — значит Firestore rules не в test mode.
+    </div>
+  </div>
+
+  <!-- ===========================
+       Firebase + Firestore (CDN)
+       =========================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+      increment
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // ==== ТВОЙ firebaseConfig ====
+    const firebaseConfig = {
+      apiKey: "AIzaSyA7xZMMBRdYiWJTCQCtCVWftB9xnbuydGM",
+      authDomain: "golosovanie-5f08e.firebaseapp.com",
+      projectId: "golosovanie-5f08e",
+      storageBucket: "golosovanie-5f08e.firebasestorage.app",
+      messagingSenderId: "849167441364",
+      appId: "1:849167441364:web:f1ac0b74e9330491460a41"
+    };
+
+    // =======================
+    // ДАННЫЕ (НОМИНАЦИИ)
+    // =======================
+    // ЗАМЕНИ:
+    // - video.url на свои (YouTube embed или mp4 файл)
+    // - nominees на реальных людей/варианты
+    const nominations = [
+      {
+        id: "darnitsa-king",
+        title: "Дарница-кинг",
+        hint: "Видео: кто и за что",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_1" },
+        nominees: [
+          { id: "n1", name: "Номинант 1", note: "за что" },
+          { id: "n2", name: "Номинант 2", note: "за что" },
+          { id: "n3", name: "Номинант 3", note: "за что" },
+        ]
+      },
+      {
+        id: "darnitsa-queen",
+        title: "Дарница-квин",
+        hint: "Видео: кто и за что",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_2" },
+        nominees: [
+          { id: "n1", name: "Номинант 1", note: "за что" },
+          { id: "n2", name: "Номинант 2", note: "за что" },
+          { id: "n3", name: "Номинант 3", note: "за что" },
+        ]
+      },
+      {
+        id: "best-dota",
+        title: "Лучший дота игрок",
+        hint: "Видео хайлайтов / объяснение",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_3" },
+        nominees: [
+          { id: "n1", name: "Игрок 1", note: "роль/тим" },
+          { id: "n2", name: "Игрок 2", note: "роль/тим" },
+          { id: "n3", name: "Игрок 3", note: "роль/тим" },
+        ]
+      },
+      {
+        id: "best-cs",
+        title: "Лучший кс игрок",
+        hint: "Видео хайлайтов / объяснение",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_4" },
+        nominees: [
+          { id: "n1", name: "Игрок 1", note: "роль" },
+          { id: "n2", name: "Игрок 2", note: "роль" },
+          { id: "n3", name: "Игрок 3", note: "роль" },
+        ]
+      },
+      {
+        id: "best",
+        title: "Лучший",
+        hint: "Видео/нарезка почему",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_5" },
+        nominees: [
+          { id: "n1", name: "Вариант 1", note: "почему" },
+          { id: "n2", name: "Вариант 2", note: "почему" },
+          { id: "n3", name: "Вариант 3", note: "почему" },
+        ]
+      },
+      {
+        id: "rollback",
+        title: "Откат года",
+        hint: "Видео: контекст/мем",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_6" },
+        nominees: [
+          { id: "n1", name: "Ситуация 1", note: "что было" },
+          { id: "n2", name: "Ситуация 2", note: "что было" },
+          { id: "n3", name: "Ситуация 3", note: "что было" },
+        ]
+      },
+      {
+        id: "breakthrough",
+        title: "Прорыв года",
+        hint: "Видео: лучшие моменты",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_7" },
+        nominees: [
+          { id: "n1", name: "Номинант 1", note: "результат" },
+          { id: "n2", name: "Номинант 2", note: "результат" },
+          { id: "n3", name: "Номинант 3", note: "результат" },
+        ]
+      },
+      {
+        id: "meme",
+        title: "Мем года",
+        hint: "Видео/мем-компиляция",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_8" },
+        nominees: [
+          { id: "n1", name: "Мем 1", note: "описание" },
+          { id: "n2", name: "Мем 2", note: "описание" },
+          { id: "n3", name: "Мем 3", note: "описание" },
+        ]
+      },
+      {
+        id: "teacher",
+        title: "Учитель года",
+        hint: "Видео: почему это он/она",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_9" },
+        nominees: [
+          { id: "n1", name: "Учитель 1", note: "предмет" },
+          { id: "n2", name: "Учитель 2", note: "предмет" },
+          { id: "n3", name: "Учитель 3", note: "предмет" },
+        ]
+      },
+      {
+        id: "delivery",
+        title: "Завоз года",
+        hint: "Видео: самый мощный завоз",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_10" },
+        nominees: [
+          { id: "n1", name: "Завоз 1", note: "что завезли" },
+          { id: "n2", name: "Завоз 2", note: "что завезли" },
+          { id: "n3", name: "Завоз 3", note: "что завезли" },
+        ]
+      },
+      {
+        id: "track",
+        title: "Трек года",
+        hint: "Видео: клип/тизер",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_11" },
+        nominees: [
+          { id: "n1", name: "Трек 1", note: "исполнитель" },
+          { id: "n2", name: "Трек 2", note: "исполнитель" },
+          { id: "n3", name: "Трек 3", note: "исполнитель" },
+        ]
+      },
+      {
+        id: "style",
+        title: "Стиль года",
+        hint: "Видео: лучшие луки/вайб",
+        video: { type: "youtube", url: "https://www.youtube.com/embed/VIDEO_ID_12" },
+        nominees: [
+          { id: "n1", name: "Чел 1", note: "за что стиль" },
+          { id: "n2", name: "Чел 2", note: "за что стиль" },
+          { id: "n3", name: "Чел 3", note: "за что стиль" },
+        ]
+      },
+    ];
+
+    // =======================
+    // Firebase init
+    // =======================
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const globalStateEl = document.getElementById("globalState");
+    const listEl = document.getElementById("list");
+
+    // =======================
+    // device_id (1 голос/устройство)
+    // =======================
+    function getDeviceId(){
+      let id = localStorage.getItem("device_id");
+      if(!id){
+        id = crypto.randomUUID();
+        localStorage.setItem("device_id", id);
+      }
+      return id;
+    }
+
+    // =======================
+    // Firestore: load/save
+    // =======================
+    async function loadResults(nominationId){
+      const ref = doc(db, "votes", nominationId);
+      const snap = await getDoc(ref);
+      if(!snap.exists()) return {};
+      return snap.data().total || {};
+    }
+
+    async function loadDeviceVotes(){
+      const deviceId = getDeviceId();
+      const ref = doc(db, "devices", deviceId);
+      const snap = await getDoc(ref);
+      if(!snap.exists()) return {};
+      return (snap.data().voted || {});
+    }
+
+    async function voteForNominee(nominationId, nomineeId){
+      const deviceId = getDeviceId();
+      const deviceRef = doc(db, "devices", deviceId);
+      const voteRef   = doc(db, "votes", nominationId);
+
+      const deviceSnap = await getDoc(deviceRef);
+      if(deviceSnap.exists()){
+        const voted = deviceSnap.data().voted || {};
+        if(voted[nominationId]){
+          alert("❌ Ты уже голосовал в этой номинации");
+          return false;
+        }
+      }
+
+      await setDoc(deviceRef, {
+        voted: { [nominationId]: nomineeId }
+      }, { merge: true });
+
+      await setDoc(voteRef, {
+        total: { [nomineeId]: 0 }
+      }, { merge: true });
+
+      await updateDoc(voteRef, {
+        [`total.${nomineeId}`]: increment(1)
+      });
+
+      return true;
+    }
+
+    // =======================
+    // UI helpers
+    // =======================
+    function renderVideo(video){
+      if(video.type === "youtube"){
+        return `
+          <div class="videoFrame">
+            <iframe
+              src="${video.url}"
+              title="Видео"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+          </div>
+        `;
+      }
+      return `
+        <div class="videoFrame">
+          <video controls preload="metadata">
+            <source src="${video.url}" type="video/mp4" />
+            Ваш браузер не поддерживает видео.
+          </video>
+        </div>
+      `;
+    }
+
+    function calcPercents(counts, nominees){
+      const total = nominees.reduce((s,n)=> s + (counts[n.id] || 0), 0);
+      return {
+        total,
+        rows: nominees.map(n => {
+          const c = counts[n.id] || 0;
+          const p = total ? Math.round((c/total)*100) : 0;
+          return { id:n.id, name:n.name, count:c, percent:p };
+        })
+      };
+    }
+
+    function miniResultsHTML(nominees, counts){
+      const { total, rows } = calcPercents(counts, nominees);
+      const lines = rows
+        .sort((a,b)=> b.count - a.count)
+        .map(r => `${r.name}: <b>${r.count}</b> (${r.percent}%)`)
+        .join("<br/>");
+      return `<span class="muted">Результаты (общие):</span><br/>${lines}<br/><span class="muted">Всего: ${total}</span>`;
+    }
+
+    // =======================
+    // Render all
+    // =======================
+    async function renderAll(){
+      globalStateEl.textContent = "Firebase: загружаем…";
+
+      let deviceVotes = {};
+      try{
+        deviceVotes = await loadDeviceVotes();
+      }catch(e){
+        console.error(e);
+        globalStateEl.textContent = "Firebase: ошибка чтения (проверь Firestore)";
+        return;
+      }
+
+      // грузим результаты по всем номинациям
+      const resultsByNom = {};
+      for(const nom of nominations){
+        try{
+          resultsByNom[nom.id] = await loadResults(nom.id);
+        }catch(e){
+          console.error(e);
+          resultsByNom[nom.id] = {};
+        }
+      }
+
+      globalStateEl.textContent = `Firebase: OK • номинаций: ${nominations.length}`;
+      listEl.innerHTML = "";
+
+      nominations.forEach((nom, idx) => {
+        const votedFor = deviceVotes[nom.id] || null;
+        const counts = resultsByNom[nom.id] || {};
+
+        const card = document.createElement("section");
+        card.className = "card";
+
+        card.innerHTML = `
+          <div class="cardHead" data-toggle="${nom.id}">
+            <div class="titleRow">
+              <p class="nomTitle">${idx+1}. ${nom.title}</p>
+              <p class="hint">${nom.hint}</p>
+            </div>
+            <div class="chev">›</div>
+          </div>
+
+          <div class="content" id="content-${nom.id}">
+            <div class="layout">
+              <div class="videoBox">
+                <div class="videoTop">
+                  <span>Видео по номинации</span>
+                  <span>${nom.video.type === "youtube" ? "YouTube" : "MP4"}</span>
+                </div>
+                ${renderVideo(nom.video)}
+              </div>
+
+              <div class="voteBox">
+                <div class="voteHeader">
+                  <b>Голосование</b>
+                  <span class="status" id="status-${nom.id}">
+                    ${votedFor ? `Голос зафиксирован: ${labelById(nom, votedFor)}` : "Выбери вариант"}
+                  </span>
+                </div>
+
+                <div class="options" role="radiogroup" aria-label="Выбор номинанта" id="opts-${nom.id}">
+                  ${nom.nominees.map(n => `
+                    <div class="opt"
+                        role="radio"
+                        tabindex="0"
+                        aria-checked="${votedFor === n.id ? "true" : "false"}"
+                        data-nomid="${nom.id}"
+                        data-nominee="${n.id}"
+                        data-locked="${votedFor ? "1" : "0"}">
+                      <p class="name">${n.name}</p>
+                      <p class="note">${n.note || ""}</p>
+                    </div>
+                  `).join("")}
+                </div>
+
+                <div class="actions">
+                  <button class="primary" id="voteBtn-${nom.id}" disabled ${votedFor ? "title='Ты уже голосовал'" : ""}>Голосовать</button>
+                  <button id="reloadBtn-${nom.id}">Обновить результаты</button>
+                </div>
+
+                <div class="foot" id="foot-${nom.id}">
+                  ${miniResultsHTML(nom.nominees, counts)}
+                </div>
+
+                <div class="foot">
+                  <span class="muted">Твой device_id:</span> <code>${getDeviceId()}</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        listEl.appendChild(card);
+      });
+
+      // Toggle open/close
+      document.querySelectorAll("[data-toggle]").forEach(h => {
+        h.addEventListener("click", () => {
+          const id = h.getAttribute("data-toggle");
+          const c = document.getElementById("content-" + id);
+          c.classList.toggle("open");
+          h.querySelector(".chev").textContent = c.classList.contains("open") ? "⌄" : "›";
+        });
+      });
+
+      // Selection buffer for each nomination (before vote)
+      const selected = {};
+
+      // Radio pick
+      document.querySelectorAll(".opt").forEach(el => {
+        const activate = () => {
+          const nomId = el.dataset.nomid;
+          const nomineeId = el.dataset.nominee;
+          const locked = el.dataset.locked === "1";
+          if(locked) return; // уже голосовал — не даем менять
+
+          selected[nomId] = nomineeId;
+          document.querySelectorAll(`.opt[data-nomid="${nomId}"]`).forEach(x => x.setAttribute("aria-checked","false"));
+          el.setAttribute("aria-checked","true");
+
+          const btn = document.getElementById("voteBtn-" + nomId);
+          btn.disabled = false;
+        };
+
+        el.addEventListener("click", activate);
+        el.addEventListener("keydown", (e) => {
+          if(e.key === "Enter" || e.key === " "){
+            e.preventDefault();
+            activate();
+          }
+        });
+      });
+
+      // Vote buttons
+      nominations.forEach(nom => {
+        const voteBtn = document.getElementById("voteBtn-" + nom.id);
+        const reloadBtn = document.getElementById("reloadBtn-" + nom.id);
+
+        voteBtn.addEventListener("click", async () => {
+          const nomineeId = selected[nom.id];
+          if(!nomineeId) return;
+
+          voteBtn.disabled = true;
+          voteBtn.textContent = "Отправляем…";
+
+          try{
+            const ok = await voteForNominee(nom.id, nomineeId);
+            if(ok){
+              alert("✅ Голос засчитан!");
+            }
+          }catch(e){
+            console.error(e);
+            alert("Ошибка голосования. Проверь Firestore и правила доступа.");
+          }finally{
+            voteBtn.textContent = "Голосовать";
+            await renderAll();
+            // раскрыть карточку обратно
+            const head = document.querySelector(`[data-toggle="${nom.id}"]`);
+            if(head){
+              const c = document.getElementById("content-" + nom.id);
+              if(c && !c.classList.contains("open")) head.click();
+            }
+          }
+        });
+
+        reloadBtn.addEventListener("click", async () => {
+          reloadBtn.disabled = true;
+          reloadBtn.textContent = "Обновляем…";
+          try{
+            await renderAll();
+          }finally{
+            reloadBtn.disabled = false;
+            reloadBtn.textContent = "Обновить результаты";
+            // раскрыть карточку обратно
+            const head = document.querySelector(`[data-toggle="${nom.id}"]`);
+            if(head){
+              const c = document.getElementById("content-" + nom.id);
+              if(c && !c.classList.contains("open")) head.click();
+            }
+          }
+        });
+      });
+    }
+
+    function labelById(nom, nomineeId){
+      const found = nom.nominees.find(x=>x.id === nomineeId);
+      return found ? found.name : "—";
+    }
+
+    // старт
+    renderAll();
+
+  </script>
+</body>
+</html>
